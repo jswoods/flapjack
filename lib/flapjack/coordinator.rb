@@ -16,6 +16,7 @@ module Flapjack
   class Coordinator
 
     def initialize(config)
+      puts "Coordinator#initialize"
       @config = config
       @redis_options = config.for_redis
       @pikelets = []
@@ -35,6 +36,10 @@ module Flapjack
     end
 
     def start(options = {})
+      puts "Coordinator#start #{options.inspect}"
+      EM.error_handler{ |e|
+          puts "Error raised during event loop: #{e.message}"
+      }
       EM.synchrony do
         add_pikelets(pikelets(@config.all))
         setup_signals if options[:signals]
@@ -118,6 +123,7 @@ module Flapjack
     # within a single coordinator instance. Coordinator is essentially
     # a singleton anyway...
     def setup_signals
+      puts "Coordinator#setup_signals"
       Kernel.trap('INT')  { stop }
       Kernel.trap('TERM') { stop }
       unless RbConfig::CONFIG['host_os'] =~ /mswin|windows|cygwin/i
@@ -128,7 +134,9 @@ module Flapjack
 
     # passed a hash with {PIKELET_TYPE => PIKELET_CFG, ...}
     def add_pikelets(pikelets_data = {})
+      puts "Coordinator#add_pikelets #{pikelets_data.inspect}"
       pikelets_data.each_pair do |type, cfg|
+      puts "Coordinator#add_pikelets - #{type.inspect} #{cfg.inspect}"
         next unless pikelet = Flapjack::Pikelet.create(type,
           :config => cfg, :redis_config => @redis_options)
         @pikelets << pikelet

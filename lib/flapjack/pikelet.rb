@@ -43,13 +43,15 @@ module Flapjack
     end
 
     def self.create(type, config = {})
+      puts "Pikelet#self.create"
       pikelet = nil
       [Flapjack::Pikelet::Generic,
-       Flapjack::Pikelet::Resque,
        Flapjack::Pikelet::Thin].each do |kl|
         break if pikelet = kl.create(type, config)
       end
+      #puts "pikelet: #{pikelet.inspect}"
       pikelet
+      puts "post pikelet"
     end
 
     class Base
@@ -99,6 +101,9 @@ module Flapjack
       end
 
       def start
+        p 'START'
+        p 'START'
+        p 'START'
         @fiber = Fiber.new {
           begin
             @pikelet.start
@@ -108,6 +113,7 @@ module Flapjack
             stop
           end
         }
+        p "Started fibre #{@fibre} for #@pikelet"
         super
         @fiber.resume
       end
@@ -147,20 +153,23 @@ module Flapjack
         pikelet_klass.instance_variable_set('@redis_config', @redis_config)
         pikelet_klass.instance_variable_set('@logger', @logger)
 
-        unless defined?(@@resque_pool) && !@@resque_pool.nil?
-          @@resque_pool = Flapjack::RedisPool.new(:config => @redis_config)
-          ::Resque.redis = @@resque_pool
-        end
+        #unless defined?(@@resque_pool) && !@@resque_pool.nil?
+        #  @@resque_pool = Flapjack::RedisPool.new(:config => @redis_config)
+        #  ::Resque.redis = @@resque_pool
+        #end
 
         # TODO error if config['queue'].nil?
 
-        @worker = EM::Resque::Worker.new(@config['queue'])
+        #@worker = EM::Resque::Worker.new(@config['queue'])
         # # Use these to debug the resque workers
         # worker.verbose = true
         # worker.very_verbose = true
       end
 
       def start
+        p 'START2'
+        p 'START2'
+        p 'START2'
         @fiber = Fiber.new {
           begin
             @worker.work(0.1)
@@ -170,6 +179,7 @@ module Flapjack
             stop
           end
         }
+        p "Started fibre #{@fibre} for #@pikelet"
         super
         @klass.start if @klass.respond_to?(:start)
         @fiber.resume
@@ -200,17 +210,23 @@ module Flapjack
                        'api'  => Flapjack::Gateways::API}
 
       def self.create(type, opts = {})
+        puts "Pikelet::Thin#self.create type: #{type.inspect}, opts: #{opts.inspect}"
         return unless pikelet_klass = PIKELET_TYPES[type]
         ::Thin::Logging.silent = true
+        puts "set logging silent true"
         self.new(type, pikelet_klass, :config => opts[:config], :redis_config => opts[:redis_config])
+        puts "called new"
       end
 
       def initialize(type, pikelet_klass, opts = {})
+        puts "Pikelet::Thin#initialize"
         super(type, pikelet_klass, opts)
+        puts "past super"
 
         pikelet_klass.instance_variable_set('@config', @config)
         pikelet_klass.instance_variable_set('@redis_config', @redis_config)
         pikelet_klass.instance_variable_set('@logger', @logger)
+        puts "set some instance variables"
 
         if @config
           @port = @config['port']
@@ -218,8 +234,18 @@ module Flapjack
         end
         @port = 3001 if (@port.nil? || @port <= 0 || @port > 65535)
 
-        @server = ::Thin::Server.new('0.0.0.0', @port,
-                    @klass, :signals => false)
+        puts "Calling ::Thin::Server.new with bind ip: 0.0.0.0, port: #{@port}, klass: #{@klass.inspect}, signals: false"
+        puts caller.length
+        puts Fiber.current
+
+        begin
+          @server = ::Thin::Server.new('0.0.0.0', @port,
+                      @klass, :signals => false)
+        rescue
+          puts "Caught error starting thin! Exiting."
+          exit 1
+        end
+        puts "created thin server!"
       end
 
       def start

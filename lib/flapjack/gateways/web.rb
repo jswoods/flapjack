@@ -18,6 +18,7 @@ module Flapjack
   module Gateways
 
     class Web < Sinatra::Base
+      puts "Web"
 
       rescue_exception = Proc.new do |env, e|
         if settings.show_exceptions?
@@ -32,12 +33,16 @@ module Flapjack
           [503, {}, ""]
         end
       end
+      puts "Web 1"
       use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
 
       use Rack::MethodOverride
 
+      puts "Web 2"
       class << self
+        puts "Web 3"
         def start
+          puts "Web#start"
           @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
 
           @logger.info "starting web - class"
@@ -60,15 +65,20 @@ module Flapjack
 
       set :views, settings.root + '/web/views'
 
+      puts "Web 4"
+
       def redis
+        puts "Web#redis"
         self.class.instance_variable_get('@redis')
       end
 
       def logger
+        puts "Web#logger"
         self.class.instance_variable_get('@logger')
       end
 
       get '/' do
+        puts "Web#get/"
         self_stats
 
         # TODO (?) recast as Entity.all do |e|; e.checks.do |ec|; ...
@@ -253,12 +263,14 @@ module Flapjack
       end
 
     protected
+      puts "Web protected"
 
       def render_haml(file, scope)
         Haml::Engine.new(File.read(File.dirname(__FILE__) + '/web/views/' + file)).render(scope)
       end
 
     private
+      puts "Web private"
 
       def get_entity_check(entity, check)
         entity_obj = (entity && entity.length > 0) ?

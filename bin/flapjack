@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+sleep 10
+
 # add lib to the default include path
 unless $:.include?(File.dirname(__FILE__) + '/../lib/')
   $: << File.dirname(__FILE__) + '/../lib'
@@ -74,6 +76,7 @@ daemonize = options.daemonize.nil? ?
 
 flapjack_coord = Proc.new {
   require 'flapjack/coordinator'
+  puts "hello from flapjack_coord proc"
   coordinator = Flapjack::Coordinator.new(config)
   coordinator.start(:signals => true)
 }
@@ -119,9 +122,9 @@ when "start"
     puts "Flapjack is already running."
   else
     print "Flapjack starting..."
-    runner.execute(:daemonize => daemonize) {
+#    runner.execute(:daemonize => daemonize) {
       flapjack_coord.call
-    }
+#    }
     puts " done."
   end
 
